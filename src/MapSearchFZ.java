@@ -694,7 +694,7 @@ public class MapSearchFZ {
         }
     }    
     
-        public static int[] multX(int[] p) { //multiply polynomial p by x
+    public static int[] multX(int[] p) { //multiply polynomial p by x
         int[] px = new int[p.length+1];
         px[px.length-1] = 0;
         System.arraycopy(p, 0, px, 0, p.length);
