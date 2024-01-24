@@ -1,26 +1,13 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-public class MapSearchFZ2 {
+public class MapSearchFC {
     static int prime;
     static int power;
     static int messageLength;
     static int degree;
-    static int fixedZeroDegree;
+//    static int fixedZeroDegree;
     static List<Integer> fixedZeroDegrees;
     static int[][] powerTable;
     static boolean degModPrime;
@@ -34,15 +21,11 @@ public class MapSearchFZ2 {
 
     static ArrayList<boolean[]> bitMasks;
     static ArrayList<boolean[]> bitMasksDMP; //additional masks for when Degree % Prime = 0
+    static ArrayList<Integer> fixedDegrees = new ArrayList<>();
+    static ArrayList<Integer> fixedIndexes = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         parseArgs(args);
-        //prime = 43;
-        //power = 1;
-        //degree = 11;
-        //fixedZeroDegree = 9;
-        //messageLength = degree + 1;
-        //GF.initGF(prime, power);
 
         long startTime = System.currentTimeMillis();
         powerTable = fillPowerTable();
@@ -87,7 +70,7 @@ public class MapSearchFZ2 {
         float numMinutes = 0;
         long count = 1;
         BufferedWriter outFile = null;
-        String outputFile = prime+"_"+power+"_"+"deg"+degree+"_a"+fixedZeroDegrees.toString()+"=0.txt";
+        String outputFile = prime+"_"+power+"_"+"deg"+degree+"_a"+"=0.txt";
 
         //Resume Search Logic
         boolean resumeValuesLoaded = false;
@@ -112,6 +95,10 @@ public class MapSearchFZ2 {
         int[] zeroPP = new int[messageLength];
         Arrays.fill(zeroPP, 0);
         zeroPP[0] = 1;
+        for(int i=0; i<fixedDegrees.size(); i++){ //fix given degrees to given indicies
+            zeroPP[fixedDegrees.get(i)] = fixedIndexes.get(i);
+            fixDegrees();
+        }
         if(checkPerm(zeroPP)) {
             foundPPs.add(Arrays.toString(zeroPP));
             String output = Arrays.toString(zeroPP);
@@ -137,6 +124,11 @@ public class MapSearchFZ2 {
                     pp[x] = 1; //Question - are the current pp's just 0's and 1's? or are there any #'s?
                 }
             }
+            for(int i=0; i<fixedDegrees.size(); i++){ //fix given degrees to given indicies
+                pp[fixedDegrees.get(i)] = fixedIndexes.get(i);
+                fixDegrees();
+            }
+
             //Set maskIndexes
             int[] maskIndexes = listIndexes(mask);
             //System.out.println("maskIndexes: "+ Arrays.toString(maskIndexes));
@@ -184,6 +176,11 @@ public class MapSearchFZ2 {
                         pp[x] = 1;
                     }
                 }
+                for(int i=0; i<fixedDegrees.size(); i++){ //fix given degrees to given indicies
+                    pp[fixedDegrees.get(i)] = fixedIndexes.get(i);
+                    fixDegrees();
+                }
+
                 //Set maskIndexes
                 int[] maskIndexes = listIndexes(mask);
                 //System.out.println("maskIndexes: "+ Arrays.toString(maskIndexes));
@@ -230,6 +227,7 @@ public class MapSearchFZ2 {
                 while(incrementPoly(pp, maskIndexes));
             }
         }
+
         outFile.close();
         saveProgressComplete();
         long endTime = System.currentTimeMillis();
@@ -397,8 +395,9 @@ public class MapSearchFZ2 {
             boolean shouldRemove = false;
 
             for (int i = 0; i < fixedZeroDegrees.size(); i++) {
-                int coefIndex = degree - fixedZeroDegrees.get(i);
-                if (mask[coefIndex] == true) {
+                int coefIndexZero = degree - fixedZeroDegrees.get(i); //if the degree with 0 has a 1 in the mask
+
+                if (mask[coefIndexZero]) {
                     shouldRemove = true;
                     break; // No need to check further, one match is enough to remove
                 }
@@ -416,8 +415,9 @@ public class MapSearchFZ2 {
                 boolean shouldRemove = false;
 
                 for (int i = 0; i < fixedZeroDegrees.size(); i++) {
-                    int coefIndex = degree - fixedZeroDegrees.get(i);
-                    if (mask[coefIndex] == true) {
+                    int coefIndexZero = degree - fixedZeroDegrees.get(i); //if the degree with 0 has a 1 in the mask
+
+                    if (mask[coefIndexZero]) {
                         shouldRemove = true;
                         break; // Similarly, break once a match is found
                     }
@@ -429,6 +429,88 @@ public class MapSearchFZ2 {
             }
         }
     }
+
+    public static void fixDegrees() {
+        Iterator<boolean[]> itr = bitMasks.iterator();
+        while(itr.hasNext()) {
+            boolean[] mask = itr.next();
+            boolean shouldRemove = false;
+
+            for (int i = 0; i < fixedDegrees.size(); i++) { //each of these degrees have a + number fixed coefficient
+                int coefIndex =  fixedDegrees.get(i); //if the degree with 0 has a 1 in the mask
+
+                if (mask[coefIndex]) {
+                    shouldRemove = true;
+                    break; // No need to check further, one match is enough to remove
+                }
+            }
+
+            if (shouldRemove) {
+                itr.remove(); // Remove outside of the inner loop
+            }
+        }
+
+        if(bitMasksDMP != null) {
+            itr = bitMasksDMP.iterator();
+            while(itr.hasNext()) {
+                boolean[] mask = itr.next();
+                boolean shouldRemove = false;
+
+                for (int i = 0; i < fixedDegrees.size(); i++) {
+                    int coefIndexZero = degree - fixedDegrees.get(i); //if the degree with 0 has a 1 in the mask
+
+                    if (mask[coefIndexZero]) {
+                        shouldRemove = true;
+                        break; // Similarly, break once a match is found
+                    }
+                }
+
+                if (shouldRemove) {
+                    itr.remove();
+                }
+            }
+        }
+    }
+
+//    public static void fixDegreesToZero() {
+//        Iterator<boolean[]> itr = bitMasks.iterator();
+//        while(itr.hasNext()) {
+//            boolean[] mask = itr.next();
+//            boolean shouldRemove = false;
+//
+//            for (int i = 0; i < fixedZeroDegrees.size(); i++) {
+//                int coefIndex = degree - fixedZeroDegrees.get(i);
+//                if (mask[coefIndex] == true) {
+//                    shouldRemove = true;
+//                    break; // No need to check further, one match is enough to remove
+//                }
+//            }
+//
+//            if (shouldRemove) {
+//                itr.remove(); // Remove outside of the inner loop
+//            }
+//        }
+//
+//        if(bitMasksDMP != null) {
+//            itr = bitMasksDMP.iterator();
+//            while(itr.hasNext()) {
+//                boolean[] mask = itr.next();
+//                boolean shouldRemove = false;
+//
+//                for (int i = 0; i < fixedZeroDegrees.size(); i++) {
+//                    int coefIndex = degree - fixedZeroDegrees.get(i);
+//                    if (mask[coefIndex] == true) {
+//                        shouldRemove = true;
+//                        break; // Similarly, break once a match is found
+//                    }
+//                }
+//
+//                if (shouldRemove) {
+//                    itr.remove();
+//                }
+//            }
+//        }
+//    }
 
     public static int getLockIndex(boolean[] mask) {
         int smallestIndex = -1;
@@ -526,6 +608,10 @@ public class MapSearchFZ2 {
     }
 
     static boolean incrementIndexNoZero(int[] poly, int index) { //return true if carries (does not include 0 values)
+//        if(fixedDegrees.contains(index)){
+//            return true;
+//        }
+
         if(index != lockIndex) {
             poly[index]++; //THIS IS WHAT MAKES IT THE NUMBER!!!!
             if(poly[index] == GF.n) {
@@ -675,7 +761,7 @@ public class MapSearchFZ2 {
 //    }
 
     public static void parseArgs(String[] args) {
-        if(args.length < 4) {
+        if(args.length < 3) {
             System.out.println("Usage: java MapSearchFZ <prime> <power> <degree> <fixedZeroDegrees...>");
             System.exit(0);
         }
@@ -685,12 +771,37 @@ public class MapSearchFZ2 {
 
         fixedZeroDegrees = new ArrayList<Integer>();
 
-        for (int i = 3; i < args.length; i++) {
-            fixedZeroDegrees.add(Integer.parseInt(args[i]));
+        for (int i = 3; i+1 < args.length; i=i+2) {
+            if(Integer.parseInt((args[i+1])) == 0){ //if it's a 0 coefficient
+                fixedZeroDegrees.add(Integer.parseInt(args[i]));
+            }
+            else{
+                fixedDegrees.add(degree-Integer.parseInt(args[i]));
+                fixedIndexes.add(Integer.parseInt(args[i+1]));
+            }
         }
         messageLength = degree + 1;
         GF.initGF(prime, power);
     }
+
+//    public static void parseArgs(String[] args) {
+//        if(args.length < 4) {
+//            System.out.println("Usage: java MapSearchFZ <prime> <power> <degree> <fixedZeroDegrees...>");
+//            System.exit(0);
+//        }
+//        prime = Integer.parseInt(args[0]);
+//        power = Integer.parseInt(args[1]);
+//        degree = Integer.parseInt(args[2]);
+//
+//        fixedZeroDegrees = new ArrayList<Integer>();
+//
+//        for (int i = 3; i < args.length; i++) {
+//            fixedZeroDegrees.add(Integer.parseInt(args[i]));
+//        }
+//        messageLength = degree + 1;
+//        GF.initGF(prime, power);
+//    }
+
     public static boolean checkResume() {
         String saveFile = prime+"_"+power+"_"+"deg"+degree+"_save.txt";
         File testFile = new File(saveFile);
