@@ -89,6 +89,7 @@ public class MapSearchFZ2 {
         BufferedWriter outFile = null;
         String outputFile = prime+"_"+power+"_"+"deg"+degree+"_a"+fixedZeroDegrees.toString()+"=0.txt";
 
+
         //Resume Search Logic
         boolean resumeValuesLoaded = false;
         long resumeCount = 0l;

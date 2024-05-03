@@ -70,8 +70,15 @@ public class MapSearchFC {
         float numMinutes = 0;
         long count = 1;
         BufferedWriter outFile = null;
-        String outputFile = prime+"_"+power+"_"+"deg"+degree+"_a"+"=0.txt";
-
+        StringBuffer totalFixedDegrees = new StringBuffer();
+        for(int i=0; i<fixedZeroDegrees.size(); i++){
+            totalFixedDegrees.append(fixedZeroDegrees.get(i) + "->0,");
+        }
+        for(int i=0; i<fixedDegrees.size(); i++){
+            totalFixedDegrees.append(degree-fixedDegrees.get(i) + "->" + fixedIndexes.get(i) + ",");
+        }
+        String outputFile = prime+"_"+power+"_"+"deg "+totalFixedDegrees;
+        System.out.println("Here is totalFixed Degrees " + totalFixedDegrees);
         //Resume Search Logic
         boolean resumeValuesLoaded = false;
         long resumeCount = 0l;
